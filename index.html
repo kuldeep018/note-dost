@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>दोस्त नोटपैड - Real-time Shared Note</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #0f0f23;
+      color: #e0e0ff;
+    }
+    h1 {
+      text-align: center;
+      color: #00ffcc;
+    }
+    #note {
+      width: 100%;
+      height: 70vh;
+      padding: 15px;
+      font-size: 18px;
+      background: #1a1a2e;
+      color: white;
+      border: 2px solid #00ffcc;
+      border-radius: 8px;
+      resize: none;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    #status {
+      text-align: center;
+      margin-top: 10px;
+      color: #ffcc00;
+      font-weight: bold;
+    }
+    .info {
+      text-align: center;
+      color: #aaa;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>दोस्त नोटपैड 🖊️</h1>
+  <div class="info">
+    type any thing!<br>
+    room link for shareing → <strong id="roomLink"></strong>
+  </div>
+
+  <textarea id="note" placeholder="अब कुछ लिखो... तुम्हारा दोस्त इंतज़ार कर रहा है 😄"></textarea>
+  
+  <div id="status">Connecting to Firebase...</div>
+
+  <!-- ================== Firebase SDK (Modular v12+) ================== -->
+  <script type="module">
+    // Firebase imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+
+    // तुम्हारा दिया हुआ config (पहले से पेस्ट कर दिया)
+    const firebaseConfig = {
+      apiKey: "AIzaSyAN1nZmkhhfr8UXmKh0AqO0PjA3VhjZeC0",
+      authDomain: "online-note-779e7.firebaseapp.com",
+      databaseURL: "https://online-note-779e7-default-rtdb.firebaseio.com",
+      projectId: "online-note-779e7",
+      storageBucket: "online-note-779e7.firebasestorage.app",
+      messagingSenderId: "1076703478919",
+      appId: "1:1076703478919:web:aea27111c4c25dc49fa422",
+      measurementId: "G-81EXFRHM1W"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Random room ID generate karo (ya URL se lo)
+    const urlParams = new URLSearchParams(window.location.search);
+    let roomId = urlParams.get("room");
+
+    if (!roomId) {
+      roomId = "dost-" + Math.random().toString(36).substr(2, 8);
+      // नया रूम बनाया तो अलर्ट दिखाओ
+      alert("share this link to chat with kuldeep:\n" + window.location.origin + window.location.pathname + "?room=" + roomId);
+    }
+
+    const noteRef = ref(db, "notes/" + roomId);
+
+    const noteArea = document.getElementById("note");
+    const status = document.getElementById("status");
+    const roomLink = document.getElementById("roomLink");
+
+    // Current link दिखाओ
+    const fullLink = window.location.origin + window.location.pathname + "?room=" + roomId;
+    roomLink.textContent = fullLink;
+
+    let isUpdating = false;
+
+    // दूसरी तरफ से बदलाव आए तो अपडेट करो
+    onValue(noteRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.text !== noteArea.value) {
+        isUpdating = true;
+        noteArea.value = data.text || "";
+        isUpdating = false;
+      }
+      status.textContent = "Connected ✓ अब लिखो!";
+    }, {
+      onlyOnce: false
+    });
+
+    // तुम लिखो तो Firebase पर भेजो
+    noteArea.addEventListener("input", () => {
+      if (!isUpdating) {
+        set(noteRef, {
+          text: noteArea.value,
+          updatedAt: Date.now()
+        }).catch((error) => {
+          console.error("Error writing:", error);
+          status.textContent = "Error: " + error.message;
+        });
+      }
+    });
+  </script>
+
+</body>
+</html>
